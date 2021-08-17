@@ -44,8 +44,8 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Generalized Local States Example" href="general_local_states_example.html" />
-    <link rel="prev" title="Training and Prediction Example" href="training_and_prediction_example.html" /> 
+    <link rel="next" title="Code" href="../code.html" />
+    <link rel="prev" title="Traning and Prediction Example" href="training_and_prediction_example.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -59,7 +59,7 @@
           
 
           
-            <a href="../welcome.html" class="icon icon-home"> rescomp
+            <a href="../index.html" class="icon icon-home"> rescomp
           
 
           
@@ -95,7 +95,7 @@
             
             
               <ul>
-<li class="toctree-l1"><a class="reference internal" href="../welcome.html">Welcome</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Welcome</a></li>
 </ul>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a><ul>
@@ -113,14 +113,13 @@
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Examples</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="minimal_example.html">Minimal Example</a></li>
 <li class="toctree-l2"><a class="reference internal" href="higher_dim_example.html">Higher Dimensional Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="training_and_prediction_example.html">Training and Prediction Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="training_and_prediction_example.html">Traning and Prediction Example</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Simulations Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="general_local_states_example.html">Generalized Local States Example</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../code.html">Rescomp Modules</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../rescomp_esn.html">ESN</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="../rescomp_esn.html#esnwrapper-class">ESNWrapper Class</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rescomp_esn.html#id1">ESNWrapper Class</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../rescomp_esn.html#esn-class">ESN Class</a></li>
 </ul>
 </li>
@@ -154,8 +153,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../changelog.html">CHANGELOG</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../changelog.html#rescomp-0-2-1deprecated-current-master-and-development-branch">rescomp 0.2.1DEPRECATED - Current Master and Development Branch</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../changelog.html#rescomp-0-2-1">rescomp 0.2.1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../changelog.html#rescomp-0-2-1-current-master-and-development-branch">rescomp 0.2.1 - Current Master and Development Branch</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../changelog.html#rescomp-0-2-0">rescomp 0.2.0</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../changelog.html#rescomp-0-1-4">rescomp 0.1.4</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../changelog.html#rescomp-0-1-3">rescomp 0.1.3</a></li>
@@ -179,7 +177,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../welcome.html">rescomp</a>
+          <a href="../index.html">rescomp</a>
         
       </nav>
 
@@ -210,7 +208,7 @@
 
   <ul class="wy-breadcrumbs">
     
-      <li><a href="../welcome.html" class="icon icon-home"></a> &raquo;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
           <li><a href="../examples.html">Examples</a> &raquo;</li>
         
@@ -503,7 +501,7 @@ div.rendered_html tbody tr:hover {
 </style>
 <div class="section" id="Simulations-Example">
 <h1>Simulations Example<a class="headerlink" href="#Simulations-Example" title="Permalink to this headline">¶</a></h1>
-<p>Short usage example for the rescomp.simulations module. We only simulate/plot a small number of different systems here. All the other implemented systems are called analogously.</p>
+<p>Short usage example for the rescomp.simulations module</p>
 <p>Import the packages</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
@@ -529,6 +527,7 @@ div.rendered_html tbody tr:hover {
 <span class="n">sim_data</span> <span class="o">=</span> <span class="n">rescomp</span><span class="o">.</span><span class="n">simulate_trajectory</span><span class="p">(</span>
     <span class="n">sys_flag</span><span class="o">=</span><span class="s1">&#39;lorenz&#39;</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">2e-2</span><span class="p">,</span> <span class="n">time_steps</span><span class="o">=</span><span class="n">simulation_time_steps</span><span class="p">,</span>
     <span class="n">starting_point</span><span class="o">=</span><span class="n">starting_point</span><span class="p">)</span>
+
 </pre></div>
 </div>
 </div>
@@ -548,6 +547,7 @@ div.rendered_html tbody tr:hover {
 <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_zlabel</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
 </pre></div>
 </div>
 </div>
@@ -652,8 +652,8 @@ div.rendered_html tbody tr:hover {
           </div>
           <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="general_local_states_example.html" class="btn btn-neutral float-right" title="Generalized Local States Example" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-        <a href="training_and_prediction_example.html" class="btn btn-neutral float-left" title="Training and Prediction Example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../code.html" class="btn btn-neutral float-right" title="Code" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="training_and_prediction_example.html" class="btn btn-neutral float-left" title="Traning and Prediction Example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

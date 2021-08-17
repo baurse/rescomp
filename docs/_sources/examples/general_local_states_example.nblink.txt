@@ -1,3 +1,0 @@
-{
-    "path": "../../bin/general_local_states_example.ipynb"
-}
