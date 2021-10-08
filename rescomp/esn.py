@@ -305,6 +305,7 @@ class ESN(_ESNCore):
         self._n_type_flag_synonyms.add_synonyms(0, ["random", "erdos_renyi"])
         self._n_type_flag_synonyms.add_synonyms(1, ["scale_free", "barabasi_albert"])
         self._n_type_flag_synonyms.add_synonyms(2, ["small_world", "watts_strogatz"])
+        self._n_type_flag_synonyms.add_synonyms(3, ["random_directed", "erdos_renyi_directed"])
 
         # Set during class creation, used during loading from pickle
         self._rescomp_version = __version__
@@ -412,6 +413,9 @@ class ESN(_ESNCore):
             network = nx.watts_strogatz_graph(self._n_dim,
                                               k=int(self._n_avg_deg), p=0.1,
                                               seed=np.random)
+        elif self._n_type_flag == 3:
+            network = nx.fast_gnp_random_graph(self._n_dim, self._n_edge_prob,
+                                               seed=np.random, directed = True)
         else:
             raise Exception("the network type %s is not implemented" %
                             str(self._n_type_flag))
