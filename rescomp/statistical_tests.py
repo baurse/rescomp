@@ -2,6 +2,7 @@ import numpy as np
 import time
 from pathlib import Path
 from . import utilities
+from . import measures
 import os
 
 class StatisticalModelTester():
@@ -24,17 +25,6 @@ class StatisticalModelTester():
 
     def set_error_function(self, error_function):
         self.error_function = error_function
-
-    def get_valid_time_index(self, error_array):
-        '''
-        :param error_array (np.ndarray):
-        :return: (int) The timesteps where the error is bigger than self.error_threshhold
-        '''
-        f = self.error_threshhold
-        if np.max(error_array) < f:
-            return len(error_array) - 1
-        else:
-            return np.argmax(error_array>f)
 
     def set_model_creation_function(self, model_creation_function):
         '''
@@ -76,7 +66,7 @@ class StatisticalModelTester():
                     results[i, j, 0,  :, :] = y_pred
                     results[i, j, 1,  :, :] = y_test
                 elif self._output_flag in (1,2):
-                    valid_times[i, j] = self.get_valid_time_index(self.error_function(y_pred, y_test))
+                    valid_times[i, j] = measures.valid_time_index(self.error_function(y_pred, y_test), self.error_threshhold)
                 elif self._output_flag == 3:
                     if i == 0 and j == 0:
                         errors = np.zeros((nr_model_realizations, nr_of_time_intervals, predict_steps))
@@ -213,10 +203,8 @@ def load_results(path):
 
     for key, val in files_dict.items(): # For each model
         for item in val: # for each file of a model
-            # print("item: ", item)
             kind = item.split("__")[1]
             kind = kind.split(".")[0]
-            # print("kind: ", kind)
             if kind == "res":
                 if not results_bool:
                     results_models = {}
