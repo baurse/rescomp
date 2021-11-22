@@ -14,3 +14,6 @@ doc/_build/
 
 # IDE specific files
 .idea/
+
+# jupyter checkpoint files:
+bin/.ipynb_checkpoints/
