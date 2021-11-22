@@ -17,3 +17,4 @@ doc/_build/
 
 # jupyter checkpoint files:
 bin/.ipynb_checkpoints/
+bin/statistical_testing/.ipynb_checkpoints
