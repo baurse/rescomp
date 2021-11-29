@@ -4,7 +4,8 @@
 import numpy as np
 import scipy
 import scipy.sparse
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
+import warnings
 from . import utilities
 
 
@@ -218,6 +219,7 @@ def error_over_time(pred_time_series, meas_time_series, distance_measure = "L2",
 
     return distance/norm
 
+
 def valid_time_index(error_series, epsilon):
     ''' return the index of the error_series where for the first time error>epsilon
     Args:
@@ -233,6 +235,7 @@ def valid_time_index(error_series, epsilon):
         return bool_array.size - 1
     else:
         return np.argmax(bool_array)
+
 
 def demerge_time(pred_time_series, meas_time_series, epsilon):
     """ Synonym for the divergence_time fct. """
@@ -313,10 +316,15 @@ def dimension(time_series, r_min=1.5, r_max=5., nr_steps=2,
         dimension = slope
 
     ###plotting
+    # if plot:
+    #     plt.loglog(N_r[0], N_r[1], 'x', basex=10., basey=10.)
+    #     plt.title('loglog plot of the N_r(radius), slope/dim = ' + str(slope))
+    #     plt.show()
     if plot:
-        plt.loglog(N_r[0], N_r[1], 'x', basex=10., basey=10.)
-        plt.title('loglog plot of the N_r(radius), slope/dim = ' + str(slope))
-        plt.show()
+        warn_string = "Plotting was removed in the entirety of the rescomp package.\n" \
+                      "The 'plot' paramter will be removed in future releases as well."
+        warnings.warn(warn_string, UserWarning)
+
     return dimension
 
 
@@ -424,18 +432,23 @@ def dimension_parameters(time_series, nr_steps=100, literature_value=None,
     dimension = best_slope
 
 
-    ###plotting
+    # ###plotting
+    # if plot:
+    #
+    #     plt.loglog(N_r[0], N_r[1], 'x', basex=10., basey=10.,label='data')
+    #     plt.loglog(N_r[0], best_intercept + best_slope*N_r[1],
+    #              label='fit: r_min ='+str(round(best_r_min,3))+', r_max = '+
+    #              str(round(best_r_max,3)))
+    #     plt.axvline(x=best_r_min)
+    #     plt.axvline(x=best_r_max)
+    #     plt.title('loglog plot of the N_r(radius), slope/dim = ' + str(dimension))
+    #     plt.legend()
+    #     plt.show()
     if plot:
-        
-        plt.loglog(N_r[0], N_r[1], 'x', basex=10., basey=10.,label='data')
-        plt.loglog(N_r[0], best_intercept + best_slope*N_r[1],
-                 label='fit: r_min ='+str(round(best_r_min,3))+', r_max = '+
-                 str(round(best_r_max,3)))
-        plt.axvline(x=best_r_min)
-        plt.axvline(x=best_r_max)
-        plt.title('loglog plot of the N_r(radius), slope/dim = ' + str(dimension))
-        plt.legend()
-        plt.show()
+        warn_string = "Plotting was removed in the entirety of the rescomp package.\n" \
+                      "The 'plot' paramter will be removed in future releases as well."
+        warnings.warn(warn_string, UserWarning)
+
     return best_r_min, best_r_max, dimension
 
 

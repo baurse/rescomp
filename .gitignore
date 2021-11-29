@@ -19,3 +19,11 @@ doc/_build/
 bin/.ipynb_checkpoints/
 bin/statistical_testing/.ipynb_checkpoints/
 bin/testing_no_git
+
+# Temporary swap files
+*.swp
+
+# Files for testing with pyenv and tox
+.python-version
+venv/
+.tox/
