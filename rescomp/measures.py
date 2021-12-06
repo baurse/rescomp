@@ -452,6 +452,94 @@ def dimension_parameters(time_series, nr_steps=100, literature_value=None,
     return best_r_min, best_r_max, dimension
 
 
+
+def iterator_based_lyapunov_spectrum(f, starting_point, T=1, tau=0, eps=1e-6, nr_of_lyapunovs = None,
+                                              nr_steps=3000, dt=1.,return_convergence=False):
+    '''
+    The Algorithm is based on: 1902.09651 "LYAPUNOV EXPONENTS of the KURAMOTO-SIVASHINSKY PDE"
+    For its explanation see: 0811.0882 "The lyapunov characteristic exponents and their computation"
+
+    Calculates the lyapunov spectrum of a discrete dynamical system
+    with x_(n+1) = f(x_n) using a standard QR-based algorithm, where the timeevolution of the deviation vectors is
+    calculated by actually simulating the trajectories and NOT by utilizing a jacobian.
+
+    Based on the iterator function f. The Jacobian is calculated numerically.
+
+    Measure for chaotic behaviour in the system.
+
+    Important characteristic to compare attractors.
+
+    Args:
+        f (function): mapping with x_n+1 = f(x_n)
+        starting_point (np.ndarray): inintial condition of iteration
+        T (float): time interval between successive QR decompositions
+        tau (float): time to simulate system before exponent computation
+        eps (float): perturbation magnitude in space, to approximate the jacobian
+        nr_of_lyapunovs (int): nr of greatest lyapunov components you which to calculate
+                               if None: all lyapunov exponents are calculated
+        nr_steps (int): The number of reorthonormalisation steps
+        dt (float): If the iterator corresponds to a contnuous system -> the time between
+                    two succesive steps
+        return_convergence (bool): If true, additionally to the lyapunov exponents, return
+                                   the convergence according to the N steps
+
+    Returns: lyapunov spectrum if return_convergence is False,
+                                 tuple of final lyapunov spectrum and development
+                                 of lyapunov spectrum if return_convergence is
+                                 True
+    '''
+    def f_steps(x, steps):
+        for i in range(steps-1):
+            x = f(x)
+        return x
+
+    m = nr_of_lyapunovs
+    N = nr_steps
+
+    tau_timesteps = int(tau/dt)
+    T_timesteps = int(T/dt)
+
+    if tau_timesteps == 0:
+        x = starting_point
+    else:
+        x = f_steps(starting_point, tau_timesteps)  # discard transient states
+
+    state_dim = x.size
+    if m is None: # calculate whole spectrum of lyapunov exponents
+        m = state_dim
+    else:
+        if m > state_dim:
+            raise Exception(f"required number of lyapunov exponents, larger than state-dimension: {m} vs. {state_dim}")
+
+    # choose m initial orthonormal directions:
+    Q = np.eye(state_dim, m)
+
+    # initialize the matrix W, that holds the deviation vectors:
+    W = np.zeros(Q.shape)
+
+    # Initialize a Matrix to store the R_diags:
+    R_diags = np.zeros((N, m))
+
+    for j in range(1, N + 1):  # "for all time intervals"
+        x_new = f_steps(x, T_timesteps)
+        for i in range(m):  # for all m orthonormal directions
+            q_i = Q[:, i]
+            x_mod_i = x + eps*q_i
+            x_mod_i_new = f_steps(x_mod_i, T_timesteps)
+            W[:, i] = (x_mod_i_new - x_new)/eps
+        Q, R = np.linalg.qr(W)
+        for i in range(m):
+            R_diags[j-1, i] = R[i, i]
+        x = x_new
+    lyapunov_exp = np.sum(np.log(np.abs(R_diags))/(N*T), axis = 0)
+    if return_convergence:
+        times = np.arange(1, N+1)*T
+        lyapunov_exp_convergence = np.cumsum(np.log(np.abs(R_diags)), axis = 0)/(np.tile(times, (m, 1)).T)
+        return lyapunov_exp, lyapunov_exp_convergence
+    else:
+        return lyapunov_exp
+
+
 pass  # TODO: Generalize Joschka's Lyap. Exp. Sprectrum from Reservoir code
 # def reservoir_lyapunov_spectrum(esn, nr_steps=2500, return_convergence=False,
 #                                 dt=1., starting_point=None):
