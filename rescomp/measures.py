@@ -539,6 +539,20 @@ def iterator_based_lyapunov_spectrum(f, starting_point, T=1, tau=0, eps=1e-6, nr
     else:
         return lyapunov_exp
 
+def KY_dimension(lyapunov_exponents):
+    '''
+    Calculates the Kaplan-Yorke dimension from the lyapunov_exponents spectrum.
+    This requires that the sum of all lyapunov exponents is negative.
+    Following: "LYAPUNOV EXPONENTS of the KURAMOTO-SIVASHINSKY PDE" (1902.09651)
+    '''
+    # sort just to make sure:
+    lyapunov_sorted = np.sort(lyapunov_exponents)[::-1] # ascending order
+    cumsum = lyapunov_sorted.cumsum()
+    j = np.where((cumsum>=0))[0].max() + 1 # +1 since index starts from 0
+    if j == len(lyapunov_exponents):
+        raise Exception("Lyapunov Exponents are \"too positive\" to calculate the Kaplan-Yorke dimension")
+    D_KY = j + cumsum[j-1]/np.abs(lyapunov_sorted[j])
+    return D_KY
 
 pass  # TODO: Generalize Joschka's Lyap. Exp. Sprectrum from Reservoir code
 # def reservoir_lyapunov_spectrum(esn, nr_steps=2500, return_convergence=False,
