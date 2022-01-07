@@ -7,6 +7,7 @@ import scipy.sparse
 # import matplotlib.pyplot as plt
 import warnings
 from . import utilities
+from . import simulations
 
 
 # TODO: there should be a utilities._SynonymDict() here
@@ -449,18 +450,17 @@ def dimension_parameters(time_series, nr_steps=100, literature_value=None,
     return best_r_min, best_r_max, dimension
 
 
-
-def iterator_based_lyapunov_spectrum(f, starting_point, T=1, tau=0, eps=1e-6, nr_of_lyapunovs = None,
-                                              nr_steps=3000, dt=1.,return_convergence=False):
+def iterator_based_lyapunov_spectrum(f, starting_point, T=1, tau=0, eps=1e-6, nr_of_lyapunovs=None,
+                                              nr_steps=3000, dt=1.,return_convergence=False, jacobian=None):
     '''
     The Algorithm is based on: 1902.09651 "LYAPUNOV EXPONENTS of the KURAMOTO-SIVASHINSKY PDE"
     For its explanation see: 0811.0882 "The lyapunov characteristic exponents and their computation"
 
     Calculates the lyapunov spectrum of a discrete dynamical system
     with x_(n+1) = f(x_n) using a standard QR-based algorithm, where the timeevolution of the deviation vectors is
-    calculated by actually simulating the trajectories and NOT by utilizing a jacobian.
+    calculated by actually simulating the trajectories and the deviation vectors
 
-    Based on the iterator function f. The Jacobian is calculated numerically.
+    Based on the iterator function f. The Jacobian is calculated numerically or if explicitly given analytically
 
     Measure for chaotic behaviour in the system.
 
@@ -479,6 +479,10 @@ def iterator_based_lyapunov_spectrum(f, starting_point, T=1, tau=0, eps=1e-6, nr
                     two succesive steps
         return_convergence (bool): If true, additionally to the lyapunov exponents, return
                                    the convergence according to the N steps
+        jacobian(None or function):
+            - If None: The jacobian is calculated numerically using the distance "eps"
+            - If Func: The jacobian is passed as a function that takes the point x as input
+                       and outputs the jacobian at this point
 
     Returns: lyapunov spectrum if return_convergence is False,
                                  tuple of final lyapunov spectrum and development
@@ -486,7 +490,7 @@ def iterator_based_lyapunov_spectrum(f, starting_point, T=1, tau=0, eps=1e-6, nr
                                  True
     '''
     def f_steps(x, steps):
-        for i in range(steps-1):
+        for i in range(steps):
             x = f(x)
         return x
 
@@ -518,12 +522,22 @@ def iterator_based_lyapunov_spectrum(f, starting_point, T=1, tau=0, eps=1e-6, nr
     R_diags = np.zeros((N, m))
 
     for j in range(1, N + 1):  # "for all time intervals"
-        x_new = f_steps(x, T_timesteps)
-        for i in range(m):  # for all m orthonormal directions
-            q_i = Q[:, i]
-            x_mod_i = x + eps*q_i
-            x_mod_i_new = f_steps(x_mod_i, T_timesteps)
-            W[:, i] = (x_mod_i_new - x_new)/eps
+        if jacobian is not None:
+            x_new = x # every x is needed to evolve the deviation vectors
+            for i in range(T_timesteps):
+                local_jac = jacobian(x_new)
+                x_new = f(x_new)
+                def Q_it(y):
+                    return local_jac.dot(y)
+                Q = simulations._runge_kutta(Q_it, dt, Q) # alternatively: Q = Q + local_jac.dot(Q)*dt
+            W = Q
+        else:
+            x_new = f_steps(x, T_timesteps)  # if T_timesteps = 1 -> it iterates the function one time
+            for i in range(m):  # for all m orthonormal directions
+                q_i = Q[:, i]
+                x_mod_i = x + eps*q_i
+                x_mod_i_new = f_steps(x_mod_i, T_timesteps)
+                W[:, i] = (x_mod_i_new - x_new)/eps
         Q, R = np.linalg.qr(W)
         for i in range(m):
             R_diags[j-1, i] = R[i, i]
