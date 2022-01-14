@@ -450,8 +450,8 @@ def dimension_parameters(time_series, nr_steps=100, literature_value=None,
     return best_r_min, best_r_max, dimension
 
 
-def iterator_based_lyapunov_spectrum(f, starting_point, T=1, tau=0, eps=1e-6, nr_of_lyapunovs=None,
-                                              nr_steps=3000, dt=1.,return_convergence=False, jacobian=None):
+def iterator_based_lyapunov_spectrum(f, starting_points, T=1, tau=0, eps=1e-6, nr_of_lyapunovs=None,
+                                     nr_steps=3000, dt=1.,return_convergence=False, jacobian=None, agg=None):
     '''
     The Algorithm is based on: 1902.09651 "LYAPUNOV EXPONENTS of the KURAMOTO-SIVASHINSKY PDE"
     For its explanation see: 0811.0882 "The lyapunov characteristic exponents and their computation"
@@ -468,7 +468,11 @@ def iterator_based_lyapunov_spectrum(f, starting_point, T=1, tau=0, eps=1e-6, nr
 
     Args:
         f (function): mapping with x_n+1 = f(x_n)
-        starting_point (np.ndarray): inintial condition of iteration
+        starting_points (np.ndarray): inintial condition of iteration:
+            possbilities:
+            - np.ndarray with shape = (state_dim) -> use as initial condition for iterations
+            - np.ndarray with shape = (N_ens, state_dim) -> do the whole calculation for N_ens starting points
+            - None -> parse None to the iteration function f(None) -> f must have a default for None
         T (float): time interval between successive QR decompositions
         tau (float): time to simulate system before exponent computation
         eps (float): perturbation magnitude in space, to approximate the jacobian
@@ -483,7 +487,11 @@ def iterator_based_lyapunov_spectrum(f, starting_point, T=1, tau=0, eps=1e-6, nr
             - If None: The jacobian is calculated numerically using the distance "eps"
             - If Func: The jacobian is passed as a function that takes the point x as input
                        and outputs the jacobian at this point
-
+        agg(bool, str or list): only has effect if a ensemble is calculated:
+            - None -> return all ensemble LEs
+            - mean -> return mean of ensemble LEs
+            - std -> return std of ensemble LEs
+            - combination of above in list -> return all in list
     Returns: lyapunov spectrum if return_convergence is False,
                                  tuple of final lyapunov spectrum and development
                                  of lyapunov spectrum if return_convergence is
@@ -497,58 +505,121 @@ def iterator_based_lyapunov_spectrum(f, starting_point, T=1, tau=0, eps=1e-6, nr
     m = nr_of_lyapunovs
     N = nr_steps
 
+    # handling the time steps
     tau_timesteps = int(tau/dt)
     T_timesteps = int(T/dt)
+    tau_new = tau_timesteps*dt
+    T_new = T_timesteps*dt
+    if tau != tau_new:
+        print(f"Updated tau to multiple of dt: tau = {tau}")
+        tau = tau_new
+    if T != T_new:
+        print(f"Updated T to multiple of dt: T = {T}")
+        T = T_new
 
-    if tau_timesteps == 0:
-        x = starting_point
-    else:
-        x = f_steps(starting_point, tau_timesteps)  # discard transient states
-
-    state_dim = x.size
+    # handling the starting point
+    if starting_points is not None:
+        if len(starting_points.shape) == 2:
+            N_ens = starting_points.shape[0]
+        else:
+            starting_points = starting_points[np.newaxis, :]
+            N_ens = 1
+        state_dim = starting_points[0, :].size
+    elif starting_points is None:
+        y = f(starting_points, 1)
+        if y is None:
+            raise Exception("iterator f does not support None as input")
+        state_dim = y.size
+        N_ens = 1
     if m is None: # calculate whole spectrum of lyapunov exponents
         m = state_dim
     else:
         if m > state_dim:
             raise Exception(f"required number of lyapunov exponents, larger than state-dimension: {m} vs. {state_dim}")
 
-    # choose m initial orthonormal directions:
-    Q = np.eye(state_dim, m)
-
-    # initialize the matrix W, that holds the deviation vectors:
-    W = np.zeros(Q.shape)
-
-    # Initialize a Matrix to store the R_diags:
-    R_diags = np.zeros((N, m))
-
-    for j in range(1, N + 1):  # "for all time intervals"
-        if jacobian is not None:
-            x_new = x # every x is needed to evolve the deviation vectors
-            for i in range(T_timesteps):
-                local_jac = jacobian(x_new)
-                x_new = f(x_new)
-                def Q_it(y):
-                    return local_jac.dot(y)
-                Q = simulations._runge_kutta(Q_it, dt, Q) # alternatively: Q = Q + local_jac.dot(Q)*dt
-            W = Q
-        else:
-            x_new = f_steps(x, T_timesteps)  # if T_timesteps = 1 -> it iterates the function one time
-            for i in range(m):  # for all m orthonormal directions
-                q_i = Q[:, i]
-                x_mod_i = x + eps*q_i
-                x_mod_i_new = f_steps(x_mod_i, T_timesteps)
-                W[:, i] = (x_mod_i_new - x_new)/eps
-        Q, R = np.linalg.qr(W)
-        for i in range(m):
-            R_diags[j-1, i] = R[i, i]
-        x = x_new
-    lyapunov_exp = np.sum(np.log(np.abs(R_diags))/(N*T), axis = 0)
+    lyapunov_exp_ens = np.zeros((N_ens, m))
     if return_convergence:
-        times = np.arange(1, N+1)*T
-        lyapunov_exp_convergence = np.cumsum(np.log(np.abs(R_diags)), axis = 0)/(np.tile(times, (m, 1)).T)
-        return lyapunov_exp, lyapunov_exp_convergence
+        lyapunov_exp_convergence_ens = np.zeros((N_ens, N, m))
+
+    for i_ens in range(N_ens):
+        if N_ens > 1:
+            print(f"N_ens: {i_ens + 1}/{N_ens}")
+        if starting_points is not None:
+            starting_point = starting_points[i_ens, :]
+
+        if tau_timesteps == 0:
+            x = starting_point
+        else:
+            x = f_steps(starting_point, tau_timesteps)  # discard transient states
+
+        # choose m initial orthonormal directions:
+        Q = np.eye(state_dim, m)
+
+        # initialize the matrix W, that holds the deviation vectors:
+        W = np.zeros(Q.shape)
+
+        # Initialize a Matrix to store the R_diags:
+        R_diags = np.zeros((N, m))
+
+        for j in range(1, N + 1):  # "for all time intervals"
+            if jacobian is not None:
+                x_new = x # every x is needed to evolve the deviation vectors
+                for i in range(T_timesteps):
+                    local_jac = jacobian(x_new)
+                    x_new = f(x_new)
+                    def Q_it(y):
+                        return local_jac.dot(y)
+                    Q = simulations._runge_kutta(Q_it, dt, Q) # alternatively: Q = Q + local_jac.dot(Q)*dt
+                W = Q
+            else:
+                x_new = f_steps(x, T_timesteps)  # if T_timesteps = 1 -> it iterates the function one time
+                for i in range(m):  # for all m orthonormal directions
+                    q_i = Q[:, i]
+                    x_mod_i = x + eps*q_i
+                    x_mod_i_new = f_steps(x_mod_i, T_timesteps)
+                    W[:, i] = (x_mod_i_new - x_new)/eps
+            Q, R = np.linalg.qr(W)
+            for i in range(m):
+                R_diags[j-1, i] = R[i, i]
+            x = x_new
+        lyapunov_exp = np.sum(np.log(np.abs(R_diags))/(N*T), axis = 0)
+
+        lyapunov_exp_ens[i_ens, :] = lyapunov_exp
+
+        if return_convergence:
+            times = np.arange(1, N+1)*T
+            lyapunov_exp_convergence = np.cumsum(np.log(np.abs(R_diags)), axis = 0)/(np.tile(times, (m, 1)).T)
+            lyapunov_exp_convergence_ens[i_ens, :, :] = lyapunov_exp_convergence
+
+    if not type(agg) in (list, tuple):
+        agg = [agg, ]
+
+    to_return = []
+    if return_convergence:
+        to_return_conv = []
+    for a in agg:
+        if a is None:
+            to_return.append(lyapunov_exp_ens)
+            if return_convergence:
+                to_return_conv.append(lyapunov_exp_convergence_ens)
+        elif a == "mean":
+            to_return.append(np.mean(lyapunov_exp_ens, axis=0))
+            if return_convergence:
+                to_return_conv.append(np.mean(lyapunov_exp_convergence_ens, axis=0))
+        elif a == "std":
+            to_return.append(np.std(lyapunov_exp_ens, axis=0))
+            if return_convergence:
+                to_return_conv.append(np.std(lyapunov_exp_convergence_ens, axis=0))
+
+    if len(to_return) == 1:
+        to_return = to_return[0]
+
+    if return_convergence:
+        if len(to_return_conv) == 1:
+            to_return_conv = to_return_conv[0]
+        return to_return, to_return_conv
     else:
-        return lyapunov_exp
+        return to_return
 
 def KY_dimension(lyapunov_exponents):
     '''
@@ -564,6 +635,92 @@ def KY_dimension(lyapunov_exponents):
         raise Exception("Lyapunov Exponents are \"too positive\" to calculate the Kaplan-Yorke dimension")
     D_KY = j + cumsum[j-1]/np.abs(lyapunov_sorted[j])
     return D_KY
+
+
+## simple LE Algorithm:
+def largest_LE_simple(f, starting_points, T=1, tau=0, dt=1., eps=1e-6, N_dims=1):
+    '''
+    TODO: Clear up, add reference etc.
+    Args:
+        f:
+        starting_points:
+        T:
+        tau:
+        dt:
+        eps:
+        N_dims:
+    Returns:
+    '''
+    def f_steps(x, steps):
+        for i in range(steps):
+            x = f(x)
+        return x
+
+    # handling the time steps
+    tau_timesteps = int(tau/dt)
+    T_timesteps = int(T/dt)
+    tau_new = tau_timesteps*dt
+    T_new = T_timesteps*dt
+    if tau != tau_new:
+        print(f"Updated tau to multiple of dt: tau = {tau}")
+        tau = tau_new
+    if T != T_new:
+        print(f"Updated T to multiple of dt: T = {T}")
+        T = T_new
+
+    # handling the starting point
+    if starting_points is not None:
+        if len(starting_points.shape) == 2:
+            N_ens = starting_points.shape[0]
+        else:
+            starting_points = starting_points[np.newaxis, :]
+            N_ens = 1
+        state_dim = starting_points[0, :].size
+    else:
+        state_dim = f(starting_points, 1).size
+        N_ens = 1
+    if N_dims is None:
+        N_dims = state_dim
+    else:
+        if N_dims > state_dim:
+            raise Exception(f"N_dims larger than state-dimension: {N_dims} vs. {state_dim}")
+
+    deviation_trajectory_ens = np.zeros((T_timesteps + 1, state_dim, N_dims, N_ens))
+    for i_ens in range(N_ens):
+        print(f"N_ens: {i_ens + 1}/{N_ens}")
+        if starting_points is not None:
+            starting_point = starting_points[i_ens, :]
+        if tau_timesteps == 0:
+            x = starting_point
+        else:
+            print("..calculating transient..")
+            x = f_steps(starting_point, tau_timesteps)  # discard transient states
+
+        initial_deviations = np.eye(state_dim, N_dims) * eps
+
+        basis_trajectory = np.zeros((T_timesteps + 1, state_dim))
+        basis_trajectory[0, :] = x
+
+        perturbed_trajectory = np.zeros((T_timesteps + 1, state_dim, N_dims))
+        for i in range(N_dims):
+            perturbed_trajectory[0, :, i] = x + initial_deviations[:, i]
+
+        for i_t in range(1, T_timesteps + 1):
+            if (i_t) % 10 == 0:
+                print(f"timestep {i_t}/{T_timesteps}", end="\r")
+            x = f(x)
+            basis_trajectory[i_t, :] = x
+
+            for i in range(N_dims):
+                perturbed_trajectory[i_t, :, i] = f(perturbed_trajectory[i_t - 1, :, i])
+        print("")
+        deviation_trajectory = perturbed_trajectory - np.repeat(basis_trajectory[:, :, np.newaxis], N_dims, axis=2)
+        deviation_trajectory_ens[:, :, :, i_ens] = deviation_trajectory
+
+    deviation_len_traj_ens = np.linalg.norm(deviation_trajectory_ens, axis=1)
+    out_mean = np.mean(deviation_len_traj_ens, axis=(-1, -2))
+    out_std = np.std(deviation_len_traj_ens, axis=(-1, -2))
+    return out_mean, out_std
 
 pass  # TODO: Generalize Joschka's Lyap. Exp. Sprectrum from Reservoir code
 # def reservoir_lyapunov_spectrum(esn, nr_steps=2500, return_convergence=False,
