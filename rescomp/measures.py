@@ -638,7 +638,7 @@ def KY_dimension(lyapunov_exponents):
 
 
 ## simple LE Algorithm:
-def largest_LE_simple(f, starting_points, T=1, tau=0, dt=1., eps=1e-6, N_dims=1):
+def largest_LE_simple(f, starting_points, T=1, tau=0, dt=1., eps=1e-6, N_dims=1, agg=None):
     '''
     TODO: Clear up, add reference etc.
     Args:
@@ -718,9 +718,28 @@ def largest_LE_simple(f, starting_points, T=1, tau=0, dt=1., eps=1e-6, N_dims=1)
         deviation_trajectory_ens[:, :, :, i_ens] = deviation_trajectory
 
     deviation_len_traj_ens = np.linalg.norm(deviation_trajectory_ens, axis=1)
-    out_mean = np.mean(deviation_len_traj_ens, axis=(-1, -2))
-    out_std = np.std(deviation_len_traj_ens, axis=(-1, -2))
-    return out_mean, out_std
+
+    # aggregation
+    if not type(agg) in (list, tuple):
+        agg = [agg, ]
+    to_return = []
+
+    for a in agg:
+        if a is None:
+            to_return.append(deviation_len_traj_ens)
+
+        elif a == "mean":
+            to_return.append(np.mean(deviation_len_traj_ens, axis=(-1, -2)))
+
+        elif a == "std":
+            to_return.append(np.std(deviation_len_traj_ens, axis=(-1, -2)))
+
+    if len(to_return) == 1:
+        to_return = to_return[0]
+
+    return to_return
+
+
 
 pass  # TODO: Generalize Joschka's Lyap. Exp. Sprectrum from Reservoir code
 # def reservoir_lyapunov_spectrum(esn, nr_steps=2500, return_convergence=False,
