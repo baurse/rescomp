@@ -57,6 +57,11 @@ class KS:
         # precompute ETDRK4 scalar quantities:
         self.setup_etdrk4()
 
+    def return_sim_data(self):
+        # added by D (for testing)
+        return np.insert(self.uu, obj=0, values=self.u0, axis=0)[:-1, :]
+
+
     def setup_timeseries(self, nout=None):
         if (nout != None):
             self.nout = int(nout)
