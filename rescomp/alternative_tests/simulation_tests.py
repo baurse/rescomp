@@ -202,7 +202,7 @@ def load_info_file(prepath, exp_name):
     return info_dict
 
 def plot_div_file(ax, file_name, prepath="", exp_name="", mean_axs="all", dim_index=None,
-                  ens_index=None, show_error=True,
+                  ens_index=None, show_error=True, title=True,
                   rel_dist=True, include_fit=True, t_min=0, t_max=5, label="", verb=1):
     '''
     Args:
@@ -297,7 +297,8 @@ def plot_div_file(ax, file_name, prepath="", exp_name="", mean_axs="all", dim_in
 
     ax.legend(loc='upper left')
     ax.grid(True)
-    ax.set_title(", ".join([f"{key}: {val}" for key,val in params.items()]))
+    if title:
+        ax.set_title(", ".join([f"{key}: {val}" for key,val in params.items()]))
 
     ax.set_ylabel(r"$\ln d/d_0$")
     ax.set_xlabel("T")
@@ -405,10 +406,10 @@ def plot_div_experiment(prepath="", exp_name="", zs=[], xs=[], ys=[], subfigsize
                 if nr_rows == 1:
                     ax = axs
                 else:
-                    ax = axs[i_x]
+                    ax = axs[i_y]
             else:
                 if nr_rows == 1:
-                    ax = axs[i_y]
+                    ax = axs[i_x]
                 else:
                     ax = axs[i_y, i_x]
 
@@ -428,7 +429,9 @@ def plot_div_experiment(prepath="", exp_name="", zs=[], xs=[], ys=[], subfigsize
                 ix = match_params(list_of_params_dict, all_params_key)
                 file_name = data_files[ix]
                 label = ", ".join([f"{key}: {val}" for key, val in z_params_key.items()])
-                plot_div_file(ax, file_name, prepath=prepath, exp_name=exp_name, verb=0, label=label, **kwargs)
+                plot_div_file(ax, file_name, prepath=prepath, exp_name=exp_name, verb=0, title=False, label=label, **kwargs)
+                title_string = ", ".join([f"{key}: {val}" for key, val in xy_params_key.items()])
+                ax.set_title(title_string)
                 # plot_div_file(ax, file_name, prepath=prepath, exp_name=exp_name, mean_axs="all",
                 #               show_error=True,
                 #               rel_dist=True, include_fit=True, dim_index=None, ens_index=None,
