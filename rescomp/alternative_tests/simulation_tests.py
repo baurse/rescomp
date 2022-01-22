@@ -253,6 +253,8 @@ def plot_div_file(ax, file_name, prepath="", exp_name="", mean_axs="all", dim_in
     elif mean_axs == "all":
         dist = np.mean(array, axis=(-1, -2))[:, np.newaxis, np.newaxis]
         error = np.std(array, axis=(-1, -2))[:, np.newaxis, np.newaxis]
+    else:
+        raise Exception(f"Mean_axs {mean_axs} is not accounted for!")
 
     x_steps, n_dims_mod, n_ens_mod = dist.shape
 
