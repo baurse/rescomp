@@ -451,7 +451,8 @@ def dimension_parameters(time_series, nr_steps=100, literature_value=None,
 
 
 def iterator_based_lyapunov_spectrum(f, starting_points, T=1, tau=0, eps=1e-6, nr_of_lyapunovs=None,
-                                     nr_steps=3000, dt=1.,return_convergence=False, jacobian=None, agg=None):
+                                     nr_steps=3000, dt=1.,return_convergence=False, return_traj_divergence=False,
+                                     jacobian=None, agg=None):
     '''
     The Algorithm is based on: 1902.09651 "LYAPUNOV EXPONENTS of the KURAMOTO-SIVASHINSKY PDE"
     For its explanation see: 0811.0882 "The lyapunov characteristic exponents and their computation"
@@ -483,6 +484,8 @@ def iterator_based_lyapunov_spectrum(f, starting_points, T=1, tau=0, eps=1e-6, n
                     two succesive steps
         return_convergence (bool): If true, additionally to the lyapunov exponents, return
                                    the convergence according to the N steps
+       return_traj_divergence (bool): If true, also return the divergence of the trajectories within every reorthostep
+                                    Only if jacobian is None
         jacobian(None or function):
             - If None: The jacobian is calculated numerically using the distance "eps"
             - If Func: The jacobian is passed as a function that takes the point x as input
@@ -497,10 +500,22 @@ def iterator_based_lyapunov_spectrum(f, starting_points, T=1, tau=0, eps=1e-6, n
                                  of lyapunov spectrum if return_convergence is
                                  True
     '''
-    def f_steps(x, steps):
+    if (return_traj_divergence) and (jacobian is not None):
+        raise Exception("traj divergence can not be computed (yet) when a jacobian is given") # TODO implement
+
+    def f_steps(x, steps, save_all=False):
+        if save_all:
+            out = np.zeros((steps+1, x.size))
+            out[0, :] = x
+
         for i in range(steps):
             x = f(x)
-        return x
+            if save_all:
+                out[i+1, :] = x
+        if save_all:
+            return out
+        else:
+            return x
 
     m = nr_of_lyapunovs
     N = nr_steps
@@ -541,6 +556,9 @@ def iterator_based_lyapunov_spectrum(f, starting_points, T=1, tau=0, eps=1e-6, n
     if return_convergence:
         lyapunov_exp_convergence_ens = np.zeros((N_ens, N, m))
 
+    if return_traj_divergence:
+        traj_divergence_ens = np.zeros((N_ens, N, m, T_timesteps+1))
+
     for i_ens in range(N_ens):
         if N_ens > 1:
             print(f"N_ens: {i_ens + 1}/{N_ens}")
@@ -572,16 +590,38 @@ def iterator_based_lyapunov_spectrum(f, starting_points, T=1, tau=0, eps=1e-6, n
                     Q = simulations._runge_kutta(Q_it, dt, Q) # alternatively: Q = Q + local_jac.dot(Q)*dt
                 W = Q
             else:
-                x_new = f_steps(x, T_timesteps)  # if T_timesteps = 1 -> it iterates the function one time
+                # x_new = f_steps(x, T_timesteps)
+                # for i in range(m):  # for all m orthonormal directions
+                #     q_i = Q[:, i]
+                #     x_mod_i = x + eps*q_i
+                #     x_mod_i_new = f_steps(x_mod_i, T_timesteps)
+                #     W[:, i] = (x_mod_i_new - x_new)/eps
+
+                # alt:
+                if return_traj_divergence:
+                    x_new_traj = f_steps(x, T_timesteps, save_all=True)
+                    x_new = x_new_traj[-1, :]
+                else:
+                    x_new = f_steps(x, T_timesteps) # if T_timesteps = 1 -> it iterates the function one time
                 for i in range(m):  # for all m orthonormal directions
                     q_i = Q[:, i]
                     x_mod_i = x + eps*q_i
-                    x_mod_i_new = f_steps(x_mod_i, T_timesteps)
+                    if return_traj_divergence:
+                        x_mod_i_new_traj = f_steps(x_mod_i, T_timesteps, save_all=True)
+                        x_mod_i_new = x_mod_i_new_traj[-1, :]
+
+                        div_i = np.linalg.norm((x_mod_i_new_traj - x_new_traj), axis=-1) # calculate the distance
+                        traj_divergence_ens[i_ens, j-1, i, :] = div_i # /eps
+                    else:
+                        x_mod_i_new = f_steps(x_mod_i, T_timesteps)
                     W[:, i] = (x_mod_i_new - x_new)/eps
+                # end alt
+
             Q, R = np.linalg.qr(W)
             for i in range(m):
                 R_diags[j-1, i] = R[i, i]
             x = x_new
+
         lyapunov_exp = np.sum(np.log(np.abs(R_diags))/(N*T), axis = 0)
 
         lyapunov_exp_ens[i_ens, :] = lyapunov_exp
@@ -597,29 +637,46 @@ def iterator_based_lyapunov_spectrum(f, starting_points, T=1, tau=0, eps=1e-6, n
     to_return = []
     if return_convergence:
         to_return_conv = []
+    if return_traj_divergence:
+        to_return_traj_div = []
     for a in agg:
         if a is None:
             to_return.append(lyapunov_exp_ens)
             if return_convergence:
                 to_return_conv.append(lyapunov_exp_convergence_ens)
+            if return_traj_divergence:
+                to_return_traj_div.append(traj_divergence_ens)
         elif a == "mean":
             to_return.append(np.mean(lyapunov_exp_ens, axis=0))
             if return_convergence:
                 to_return_conv.append(np.mean(lyapunov_exp_convergence_ens, axis=0))
+            if return_traj_divergence:
+                to_return_traj_div.append(np.mean(traj_divergence_ens, axis=0))
         elif a == "std":
             to_return.append(np.std(lyapunov_exp_ens, axis=0))
             if return_convergence:
                 to_return_conv.append(np.std(lyapunov_exp_convergence_ens, axis=0))
+            if return_traj_divergence:
+                to_return_traj_div.append(np.std(traj_divergence_ens, axis=0))
+
+    master_return = []
 
     if len(to_return) == 1:
         to_return = to_return[0]
-
+        master_return.append(to_return)
     if return_convergence:
         if len(to_return_conv) == 1:
             to_return_conv = to_return_conv[0]
-        return to_return, to_return_conv
-    else:
-        return to_return
+        master_return.append(to_return_conv)
+    if return_traj_divergence:
+        if len(to_return_traj_div) == 1:
+            to_return_traj_div = to_return_traj_div[0]
+        master_return.append(to_return_traj_div)
+
+    if len(master_return) == 1:
+        master_return = master_return[0]
+
+    return master_return
 
 def KY_dimension(lyapunov_exponents):
     '''
@@ -638,7 +695,7 @@ def KY_dimension(lyapunov_exponents):
 
 
 ## simple LE Algorithm:
-def largest_LE_simple(f, starting_points, T=1, tau=0, dt=1., eps=1e-6, N_dims=1, agg=None):
+def calculate_divergence(f, starting_points, T=1, tau=0, dt=1., eps=1e-6, N_dims=1, agg=None):
     '''
     TODO: Clear up, add reference etc.
     Args:
