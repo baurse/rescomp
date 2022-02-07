@@ -695,7 +695,7 @@ def KY_dimension(lyapunov_exponents):
 
 
 ## simple LE Algorithm:
-def calculate_divergence(f, starting_points, T=1, tau=0, dt=1., eps=1e-6, N_dims=1, agg=None):
+def calculate_divergence(f, starting_points, T=1, tau=0, dt=1., eps=1e-6, N_dims=1, agg=None, random_directions=False):
     '''
     TODO: Clear up, add reference etc.
     Args:
@@ -736,11 +736,13 @@ def calculate_divergence(f, starting_points, T=1, tau=0, dt=1., eps=1e-6, N_dims
     else:
         state_dim = f(starting_points, 1).size
         N_ens = 1
-    if N_dims is None:
-        N_dims = state_dim
-    else:
-        if N_dims > state_dim:
-            raise Exception(f"N_dims larger than state-dimension: {N_dims} vs. {state_dim}")
+
+    if not random_directions:
+        if N_dims is None:
+            N_dims = state_dim
+        else:
+            if N_dims > state_dim:
+                raise Exception(f"N_dims larger than state-dimension: {N_dims} vs. {state_dim}")
 
     deviation_trajectory_ens = np.zeros((T_timesteps + 1, state_dim, N_dims, N_ens))
     for i_ens in range(N_ens):
@@ -753,7 +755,10 @@ def calculate_divergence(f, starting_points, T=1, tau=0, dt=1., eps=1e-6, N_dims
             print("..calculating transient..")
             x = f_steps(starting_point, tau_timesteps)  # discard transient states
 
-        initial_deviations = np.eye(state_dim, N_dims) * eps
+        if random_directions:
+            initial_deviations = np.random.randn(state_dim, N_dims) * eps
+        else:
+            initial_deviations = np.eye(state_dim, N_dims) * eps
 
         basis_trajectory = np.zeros((T_timesteps + 1, state_dim))
         basis_trajectory[0, :] = x
