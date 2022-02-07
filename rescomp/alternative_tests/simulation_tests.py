@@ -195,7 +195,7 @@ def compare_simulations_leqr(create_sim_func, create_sp_func, create_sim_func_ke
 
 def compare_simulations_div(create_sim_func, create_sp_func, create_sim_func_keys, create_sp_func_keys,
                     parameter_dict, save=False, prepath="", exp_name="", Nens=1, Ndims=1, get_info=True,
-                        prefix="div"):
+                        prefix="div", random_directions=False):
     '''
     Compare the divergence ln(d(t)/d_0) for differenent simulations
     TODO: add proper docstring
@@ -309,7 +309,7 @@ def compare_simulations_div(create_sim_func, create_sp_func, create_sim_func_key
                         out = rescomp.measures.calculate_divergence(f, starting_points=starting_points_after_tau,
                                                                  T=T,
                                                                  tau=0, dt=dt, eps=eps, N_dims=Ndims,
-                                                                 agg=None)
+                                                                 agg=None, random_directions=random_directions)
 
                         out_name = param_dict_to_name(sim_and_sp_dict)
                         out_name += f"__dt_{param_to_str(dt)}__tau_{param_to_str(tau)}__T_{param_to_str(T)}" \
@@ -435,8 +435,8 @@ def plot_div_file(ax, file_name, prepath="", exp_name="", mean_axs="all", dim_in
         ens_index = np.arange(n_ens_mod)
     elif type(ens_index) == int:
         ens_index = [ens_index, ]
-    print("x_steps: ", x_steps)
-    print("T: ", T)
+    # print("x_steps: ", x_steps)
+    # print("T: ", T)
     x = np.arange(x_steps)*dt
     for i_dim in range(n_dims_mod):
         for i_ens in range(n_ens_mod):
@@ -471,10 +471,10 @@ def plot_div_file(ax, file_name, prepath="", exp_name="", mean_axs="all", dim_in
                     label_current = label_current + f"{add}firstlast: {coef_fl[0].round(3)}"
 
                 p = ax.errorbar(x=x, y=data, yerr=(data_error_high - data, data - data_error_low),
-                                label=label_current,
+                                # label=label_current,
                                 alpha=0.2)
                 c = p[0].get_color()
-                ax.plot(x, data, c=c)
+                ax.plot(x, data, c=c, label=label_current)
                 if include_fit:
                     ax.plot(x_fit, y_fit, linestyle="--", c=c)
 
@@ -524,7 +524,6 @@ def plot_qrdiv_file(ax, file_name, prepath="", exp_name="", mean_axs="all", le_i
 
     array = np.load(os.path.join(path, file))
     array_shape = array.shape
-    print(file_name)
     if verb == 1:
         print(file_name)
         print(f"shape of file: {array_shape}")
@@ -804,7 +803,10 @@ def plot_experiment(plot_func, prepath="", exp_name="", prefix="", zs=[], xs=[],
         z_index_to_sweep[i] = items
         i += 1
 
-    fig, axs = plt.subplots(nrows=nr_rows, ncols=nr_cols, figsize=(fig_size_x*nr_cols, fig_size_y*nr_rows))
+    fig, axs = plt.subplots(nrows=nr_rows, ncols=nr_cols, figsize=(fig_size_x*nr_cols, fig_size_y*nr_rows),
+                            )
+    fig.patch.set_facecolor('white')
+    # fig.patch.set_alpha(0.6)
 
     for i_x in range(nr_cols):
         for i_y in range(nr_rows):
