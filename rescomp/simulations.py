@@ -124,6 +124,31 @@ def _mod_lorenz_wrong(x, sigma=10, rho=28, beta=8 / 3):
     else:
         raise Exception('check shape of x, should have 3 components')
 
+def _lorenz_4D(x, sigma=10, rho=28, beta=8 / 3):
+    """ Calculates (dx/dt, dy/dt, dz/dt, dw/dt) with given (x,y,z,w) for RK4
+        Eq:
+        dx/dt = sigma*(y-x) + w
+        dy/dt = rho*x - x*z - y
+        dz/dt = x*y - beta*z
+        dw/dt = -y*x - w
+
+    Args:
+        x: (np.ndarray): (x,y,z,w) coordinates
+        sigma (float): 'sigma' parameter in the Lorenz 63 equations
+        rho (float): 'rho' parameter in the Lorenz 63 equations
+        beta (float): 'beta' parameter in the Lorenz 63 equations
+
+    Returns:
+        (np.ndarray): (dx/dt, dy/dt, dz/dt, dw/dt) corresponding to input x
+    """
+    if x.shape == (4,):
+        return np.array([sigma * (x[1] - x[0]) + x[3],
+                         x[0] * (rho - x[2]) - x[1],
+                         x[0] * x[1] - beta * x[2],
+                         -x[0]*x[1] - x[3]])
+    else:
+        raise Exception('check shape of x, should have 4 components')
+
 
 def _chua(x):
     """ Calculates (dx/dt, dy/dt, dz/dt) with given (x,y,z) for RK4
@@ -363,6 +388,8 @@ _sys_flag_synonyms.add_synonyms(12, "roessler_sprott")
 _sys_flag_synonyms.add_synonyms(13, "kuramoto_sivashinsky")
 _sys_flag_synonyms.add_synonyms(14, "kuramoto_sivashinsky_old")
 _sys_flag_synonyms.add_synonyms(15, "kuramoto_sivashinsky_custom")
+_sys_flag_synonyms.add_synonyms(16, "logistic")
+_sys_flag_synonyms.add_synonyms(17, "lorenz_4D")
 
 
 def simulate_trajectory(sys_flag='mod_lorenz', dt=2e-2, time_steps=int(2e4),
@@ -420,6 +447,8 @@ def simulate_trajectory(sys_flag='mod_lorenz', dt=2e-2, time_steps=int(2e4),
                 - None
             - "thomas". Possible kwargs:
                 - None
+            - "logistic". Possible kwargs:
+                - parameter r
 
         dt (float): Size of time steps
         time_steps (int): Number of time steps to simulate
@@ -432,6 +461,7 @@ def simulate_trajectory(sys_flag='mod_lorenz', dt=2e-2, time_steps=int(2e4),
         trajectory (np.ndarray) the full trajectory, ready to be used for RC
 
     """
+    discrete_map = False  # Assume a continuous map
 
     sys_flag_syn = _sys_flag_synonyms.get_flag(sys_flag)
 
@@ -451,9 +481,9 @@ def simulate_trajectory(sys_flag='mod_lorenz', dt=2e-2, time_steps=int(2e4),
         f = lambda x: _roessler(x, **kwargs)
     elif sys_flag_syn == 4:
         # Starting point is ignored here atm
-        if starting_point is not None:
-            # TODO: should be a warning in the logger.
-            print("Starting point is ignored for the Lorenz96 equation")
+        # if starting_point is not None:
+        #     # TODO: should be a warning in the logger.
+        #     print("Starting point is ignored for the Lorenz96 equation")
         f = lambda x: _lorenz_96(x, **kwargs)
     elif sys_flag_syn == 5:
         f = lambda x: _ueda(x)
@@ -480,6 +510,11 @@ def simulate_trajectory(sys_flag='mod_lorenz', dt=2e-2, time_steps=int(2e4),
         return _kuramoto_sivashinsky_old(dt=dt, time_steps=time_steps - 1, **kwargs)
     elif sys_flag_syn == 15:
         return _kuramoto_sivashinsky_custom(dt=dt, time_steps=time_steps - 1, starting_point=starting_point, **kwargs)
+    elif sys_flag_syn == 16:
+        f = lambda x: _logistic_map(x, **kwargs)
+        discrete_map = True
+    elif sys_flag_syn == 17:
+        f = lambda x: _lorenz_4D(x, **kwargs)
     else:
         raise Exception('sys_flag not recoginized')
 
@@ -489,7 +524,10 @@ def simulate_trajectory(sys_flag='mod_lorenz', dt=2e-2, time_steps=int(2e4),
 
     for t in range(traj_size[0]):
         traj[t] = y
-        y = _runge_kutta(f, dt, y=y)
+        if discrete_map:
+            y = f(y)
+        else:
+            y = _runge_kutta(f, dt, y=y)
     return traj
 
 
@@ -969,3 +1007,17 @@ def _kuramoto_sivashinsky_rkstiff(dimensions, system_size, dt, time_steps, start
         results[i, :] = np.fft.irfft(uFFT)
 
     return results
+
+
+def _logistic_map(x, r=4):
+    """
+    The logistic map
+    Args:
+        x: input x_n
+        r: parameter
+
+    Returns:
+     x_(n+1)
+    """
+    return r*x*(1-x)
+
