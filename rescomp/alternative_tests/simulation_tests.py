@@ -296,6 +296,7 @@ def compare_simulations_div(create_sim_func, create_sp_func, create_sim_func_key
                 return sim_func(time_steps=2, dt=dt, starting_point=x)[-1]
 
             for tau in parameter_dict["tau"]:
+                print("simulate the tau time steps ...")
                 starting_points_after_tau = np.zeros(starting_points.shape)
                 tau_steps = int(tau/dt)
                 for iens in range(Nens):
