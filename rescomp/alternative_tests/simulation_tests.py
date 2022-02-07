@@ -1,3 +1,7 @@
+"""
+Test different data creation functions
+"""
+
 import os
 from datetime import date
 import time
