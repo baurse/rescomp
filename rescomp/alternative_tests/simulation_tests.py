@@ -297,7 +297,9 @@ def compare_simulations_div(create_sim_func, create_sp_func, create_sim_func_key
 
             # define the iterator f for later
             def f(x):
-                return sim_func(time_steps=2, dt=dt, starting_point=x)[-1]
+                # return sim_func(time_steps=2, dt=dt, starting_point=x)[-1]
+                return sim_func(time_steps=1, dt=dt, starting_point=x)[-1]
+                # return sim_func(time_steps=4, dt=dt, starting_point=x)[-1]
 
             for tau in parameter_dict["tau"]:
                 print("simulate the tau time steps ...")
