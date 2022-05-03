@@ -720,7 +720,7 @@ def _kuramoto_sivashinsky_custom(dimensions, system_size, dt, time_steps, starti
         u = np.cos(2 * np.pi * x / size) * (1 + np.sin(2 * np.pi * x / size))
     else:
         u = starting_point
-    if change_precision: u = u.astype(np.single)
+    if change_precision: u = u.astype(f_dtype)
     v = custom_fft(u)
 
     # Wave numbers
